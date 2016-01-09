@@ -22,25 +22,101 @@
 
   <script src="js/simple-media-server.js"></script>
   <script src="js/upload.js"></script>
+  <script src="js/directory.js"></script>
+  <script src="js/fs-stat.js"></script>
+  <script src="js/messages.js"></script>
 </head>
 
 <body>
   <div class="container">
     <h1>Simple Media Server</h1>
     <div class="row">
-      <div class="col-md-8">
-        <p>Directory listing or file display.</p>
+      <!-- Directory listing -->
+      <div class="col-md-8" ng-controller="DirectoryCtrl">
+        <div class="form-group">
+          <input class="form-control monospace" type="text" ng-model="path"
+                 ng-model-options="{getterSetter: true, debounce: 500}" />
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th class="col-md-1"></th>
+                <th class="col-md-5">Name</th>
+                <th>Modified</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr ng-if="path() !== '/' && path() !== ''">
+                <td>
+                  <span class="glyphicon glyphicon-folder-open"></span>
+                </td>
+                <td>
+                  <a ng-href="#{{parentDir()}}">Parent directory</a>
+                </td>
+                <td/>
+              </tr>
+              <tr ng-repeat="file in files">
+                <td>
+                  <span class="glyphicon glyphicon-file" ng-if="file.type == 'file'"></span>
+                  <span class="glyphicon glyphicon-folder-open" ng-if="file.type == 'directory'"></span>
+                </td>
+                <td>
+                  <a ng-href="#{{file.path}}">{{file.name}}</a>
+                </td>
+                <td>
+                  {{file.modified * 1000 | date:'medium'}}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-      <div class="col-md-4" ng-controller="UploadCtrl">
-        <form class="form-inline" action="/upload" method="post" enctype="multipart/form-data">
-          <div class="form-group">
-            <label>Upload files to <code><%= files_root_dir %>{{getPath()}}</code>
-            <input type="file" name="files[]" multiple /></label>
+
+      <div class="col-md-4">
+        <!-- Uploads -->
+        <div ng-controller="UploadCtrl">
+          <p>
+            <form class="form-inline" action="/upload" method="post"
+                  enctype="multipart/form-data">
+              <div class="form-group">
+                <label>Upload files to <code>{{path()}}</code>
+                <input type="file" name="files[]" multiple /></label>
+              </div>
+              <button type="submit" class="btn btn-primary">Submit</button>
+            </form>
+          </p>
+        </div>
+
+        <!-- FS Stat -->
+        <div ng-controller="fsStatCtrl" class="panel text-center"
+             ng-class="{'panel-danger': fsStat.usedPercent>.8, 'panel-warning': fsStat.usedPercent>.7, 'panel-success': fsStat.usedPercent<=.7}">
+          <div class="panel-heading">
+            <h3 class="panel-title">Filesystem Report</h3>
           </div>
-          <button type="submit" class="btn btn-default">Submit</button>
-        </form>
+          <div class="panel-body">
+            <code><%= files_root_dir %></code><br/>
+            Disk space used: {{ fsStat.usedPercent | percentage:0}}<br/>
+            Available disk space: {{fsStat.blocks_available * fsStat.block_size | bytes}}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div ng-controller="MsgCtrl">
+      <div ng-repeat="msg in msgs" id="msg.id" class="message alert alert-dismissible"
+           ng-class="{'alert-success': msg.context=='success', 'alert-info': msg.context=='info', 'alert-warning': msg.context=='warning', 'alert-danger': msg.context=='danger'}">
+        <button class="close" ng-click="removeMsg(msg.id)"><span>&times;</span></button>
+        <span class="glyphicon"
+              ng-class="{'glyphicon-ok-sign': msg.context=='success', 'glyphicon-info-sign': msg.context=='info', 'glyphicon-warning-sign': msg.context=='warning', 'glyphicon-remove-sign': msg.context=='danger'}" />
+        {{msg.text}}
       </div>
     </div>
   </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
 </body>
 </html>
